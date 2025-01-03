@@ -1,0 +1,4 @@
+"autogen-agentchat==0.4.0.dev12"
+chainlit
+"pydantic==2.10.1" 
+"opentelemetry-sdk==1.28.2"
