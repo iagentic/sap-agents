@@ -13,13 +13,16 @@ from autogen_ext.models.openai import OpenAIChatCompletionClient
 from autogen_agentchat.messages import TextMessage
 from autogen_agentchat.ui import Console
 from autogen_core import CancellationToken
+from dotenv import load_dotenv
 
+load_dotenv() 
 USER_PROXY_MESSAGE = '''A human admin. Interact with the planner to discuss the plan. 
 Plan execution needs to be approved by this admin.'''
 
 model_client = OpenAIChatCompletionClient(
     model="gpt-4o",
-    # api_key="YOUR_API_KEY",
+    
+    api_key=os.getenv("OPENAI_API_KEY"),
 )
 
 async def create_new_connection(service_type: str, customer_name: str, address:str) -> str:
@@ -46,9 +49,10 @@ public_utility_agent = AssistantAgent(
     # It can hand off control to the specialized agents or the user
     handoffs=["user","new_connection_agent", "repair_agent", "disconnect_agent"],
     system_message="""
-- You are a customer service agent for a public utility company that provides electricity and water.
+- You are a friendly customer service agent for a public utility company that provides electricity and water.
+- You will always greet your customers and ask if they need any help with a new service or rapir existing service or disconnect service  
 - You handle general questions about billing, service usage, and service offerings.
-- You will ask the customer if they want a new service or repair existing service or disconnect existing service 
+- You will always ask the customer if they need a new service or repair existing service or disconnect existing service 
 - If a customer wants to create a new connection, you will collect customer full name, service type  and address with unit/house number, street name, city state and zip code and then hand off to new connection agent.
 - If a customer wants a repair ask for customer id and then  hand off to repair_agent.
 - If a customer wants to disconnect a service ask for customer id and then hand off to disconnect agent.
@@ -117,84 +121,6 @@ team = SelectorGroupChat(
     model_client = model_client,
     termination_condition=termination,
 )
-async def ask_helper(func, **kwargs):
-    res = await func(**kwargs).send()
-    while not res:
-        res = await func(**kwargs).send()
-    return res
-
-class ChainlitAssistantAgent(AssistantAgent):
-    """
-    Wrapper for AutoGens Assistant Agent
-    """
-    def send(
-        self,
-        message: Union[Dict, str],
-        recipient: BaseChatAgent,
-        request_reply: Optional[bool] = None,
-        silent: Optional[bool] = False,
-    ) -> bool:
-        cl.run_sync(
-            cl.Message(
-                content=f'*Sending message to "{recipient.name}":*\n\n{message}',
-                author=self.name,
-            ).send()
-        )
-        super(ChainlitAssistantAgent, self).send(
-            message=message,
-            recipient=recipient,
-            request_reply=request_reply,
-            silent=silent,
-        )
-        
-class ChainlitUserProxyAgent(UserProxyAgent):
-    """
-    Wrapper for AutoGens UserProxy Agent. Simplifies the UI by adding CL Actions.
-    """
-    def get_human_input(self, prompt: str) -> str:
-        if prompt.startswith(
-            "Provide feedback to chat_manager. Press enter to skip and use auto-reply"
-        ):
-            res = cl.run_sync(
-                ask_helper(
-                    cl.AskActionMessage,
-                    content="Continue or provide feedback?",
-                    actions=[
-                        cl.Action( name="continue", value="continue", label="✅ Continue" ),
-                        cl.Action( name="feedback",value="feedback", label="💬 Provide feedback"),
-                        cl.Action( name="exit",value="exit", label="🔚 Exit Conversation" )
-                    ],
-                )
-            )
-            if res.get("value") == "continue":
-                return ""
-            if res.get("value") == "exit":
-                return "TERMINATE"
-
-        reply = cl.run_sync(ask_helper(cl.AskUserMessage, content=prompt, timeout=60))
-
-        return reply["output"].strip()
-
-    def send(
-        self,
-        message: Union[Dict, str],
-        recipient: BaseChatAgent,
-        request_reply: Optional[bool] = None,
-        silent: Optional[bool] = False,
-    ):
-        #cl.run_sync(
-            #cl.Message(
-            #    content=f'*Sending message to "{recipient.name}"*:\n\n{message}',
-            #    author=self.name,
-            #).send()
-        #)
-        super(ChainlitUserProxyAgent, self).send(
-            message=message,
-            recipient=recipient,
-            request_reply=request_reply,
-            silent=silent,
-        )
-
 
 
 
@@ -224,13 +150,27 @@ async def set_starters():
         ]
 # ...
 
-
+@cl.password_auth_callback
+def auth_callback(username: str, password: str):
+    # Fetch the user matching username from your database
+    # and compare the hashed password with the value stored in the database
+    username1 = os.getenv("USERNAME")
+    password1 = os.getenv("PASSCODE")
+    if (username, password) == (username1, password1) :
+        return cl.User(
+            identifier="admin", metadata={"role": "admin", "provider": "credentials"}
+        )
+    else:
+        return None
 
 @cl.on_chat_start
 async def on_chat_start():
     print("A new chat session has started!")
-    user_proxy  = ChainlitUserProxyAgent("Admin")
-    cl.user_session.set("user_proxy", user_proxy)
+    # user_proxy  = ChainlitUserProxyAgent("Admin")
+    # cl.user_session.set("user_proxy", user_proxy)
+    # await cl.Message(
+    #     content="Hi There ! How can I help you today?",
+    # ).send()
 
 
 
@@ -240,7 +180,7 @@ async def run_conversation(message: cl.Message):
     #     content=f"Received: {message.content}",
     # ).send()
     # UserProxyAgent.on_messages(message)
-    user_proxy  = cl.user_session.get("user_proxy")
+    # user_proxy  = cl.user_session.get("user_proxy")
     import asyncio
     # asyncio.run(cl.make_async(public_utility_agent.on_messages(
     #     [TextMessage(content="What is your name? ", source="user")], cancellation_token=CancellationToken()
