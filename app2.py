@@ -9,7 +9,7 @@ import api as api
 from autogen_agentchat.agents import AssistantAgent, UserProxyAgent, BaseChatAgent
 from autogen_agentchat.conditions import HandoffTermination, TextMentionTermination,MaxMessageTermination
 from autogen_agentchat.messages import HandoffMessage
-from autogen_agentchat.teams import Swarm, SelectorGroupChat,RoundRobinGroupChat
+from autogen_agentchat.teams import Swarm, SelectorGroupChat
 from autogen_agentchat.ui import Console
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 from autogen_agentchat.messages import TextMessage
@@ -22,9 +22,8 @@ load_dotenv()
 
 model_client = OpenAIChatCompletionClient(
     model="gpt-4o",
-    # https://platform.openai.com/docs/models#o1
+    
     api_key=os.getenv("OPENAI_API_KEY"),
-    temperature=0.1,
     
 )
 groq_model_client = OpenAIChatCompletionClient(
@@ -42,23 +41,11 @@ groq_model_client = OpenAIChatCompletionClient(
 
 # model_client = groq_model_client
 text_mention_termination = TextMentionTermination("TERMINATE")
-max_messages_termination = MaxMessageTermination(max_messages=6)
+max_messages_termination = MaxMessageTermination(max_messages=3)
 termination = text_mention_termination | max_messages_termination
-# termination = text_mention_termination 
-
-
-# team = RoundRobinGroupChat(
-#     [agents.get_assistant_agent(model_client), agents.get_new_connection_agent(model_client), agents.get_repair_agent(model_client), agents.get_disconnect_agent(model_client)],
-# )
-# team = SelectorGroupChat(
-#     [agents.get_assistant_agent(model_client), agents.get_new_connection_agent(model_client), agents.get_repair_agent(model_client), agents.get_disconnect_agent(model_client)],
-#     model_client = model_client,
-#     termination_condition=termination,
-# )
-
-team = Swarm(
-    [agents.get_assistant_agent(model_client),agents.get_new_customer_agent(model_client), agents.get_new_connection_agent(model_client), agents.get_repair_agent(model_client), agents.get_disconnect_agent(model_client),agents.get_result_summarizer(model_client)],
-    # model_client = model_client,
+team = SelectorGroupChat(
+    [agents.get_assistant_agent(model_client), agents.get_new_connection_agent(model_client), agents.get_repair_agent(model_client), agents.get_disconnect_agent(model_client)],
+    model_client = model_client,
     termination_condition=termination,
 )
 async def create_new_connection(service_type: str, customer_name: str, address:str) -> str:
@@ -178,7 +165,6 @@ async def run_conversation(message: cl.Message):
     # print("Send to UI?",response.messages[-1].content)
     llm_content = ""
     for msg in response.messages:
-        
         llm_content = msg.content 
         print("Send to UI?",msg.content)
     await cl.Message(
