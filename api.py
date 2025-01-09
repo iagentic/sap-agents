@@ -72,17 +72,20 @@ async def create_customer(first_name, last_name,state_code,city,street,house_num
         "Accept": "application/json"
     }
     response = session.post(CUSTOMER_URL, headers=headers, json=payload)
-    # response = json.loads(response.text)
+    data = json.loads(response.text)
+    customer_id = data["d"]["results"]["CustomerID"]
+    print("Customer Creation Response:", customer_id)
     # print("Service Creation Response:", response.text)
-    return response.text
+    return "customer id is "+customer_id
     
-async def create_service(service_type, customer_name, address):
+async def create_service(customer_id,service_kind,service_type, customer_name, address):
     # 3) Prepare Payload
     payload = {
-        "Name": f"New  {service_type} connection in {address} for {customer_name}",
+        "Name": f"{service_kind}  {service_type} connection in {address} for {customer_name}",
         "ProcessingTypeCode": "SRRQ",  # Service Request type
         "Customer": customer_name,          # Example customer
-        # "CustomerID": "1000077",       # Customer ID
+        "CustomerID":customer_id,     
+            # Customer ID
         "ServicePriorityCode": "3",    # Normal priority
         "ServiceRequestLifeCycleStatusCode": "1",  # Open
         "DataOriginTypeCode": "1",     # Manual data entry
@@ -115,8 +118,12 @@ async def create_service(service_type, customer_name, address):
         "Accept": "application/json"
     }
     response = session.post(SERVICE_URL, headers=headers, json=payload)
-    # response = json.loads(response.text)
+    data = json.loads(response.text)
+    service = data["d"]["results"]["Name"]
+    service_url = data["d"]["results"]["__metadata"]["uri"]
     # print("Service Creation Response:", response.text)
-    return response.text
+    # f" New '{service}', is created for customer  '{customer_id}'"
+
+    return f"  '{service}', is created for customer  '{customer_id}' reference url is {service_url}/?$format=json"
 
     
