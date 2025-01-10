@@ -9,7 +9,7 @@ import api as api
 from autogen_agentchat.agents import AssistantAgent, UserProxyAgent, BaseChatAgent
 from autogen_agentchat.conditions import HandoffTermination, TextMentionTermination,MaxMessageTermination
 from autogen_agentchat.messages import HandoffMessage
-from autogen_agentchat.teams import Swarm, SelectorGroupChat
+from autogen_agentchat.teams import Swarm, SelectorGroupChat,RoundRobinGroupChat
 from autogen_agentchat.ui import Console
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 from autogen_agentchat.messages import TextMessage
@@ -22,13 +22,14 @@ load_dotenv()
 
 model_client = OpenAIChatCompletionClient(
     model="gpt-4o",
-    
+    # https://platform.openai.com/docs/models#o1
     api_key=os.getenv("OPENAI_API_KEY"),
+    temperature=0.1,
     
 )
 groq_model_client = OpenAIChatCompletionClient(
     # model="gpt-4o",
-    model="llama-3.3-70b-specdec",
+    model="llama-3.1-8b-instant",
     base_url="https://api.groq.com/openai/v1",
     api_key=os.getenv("GROQ_API_KEY"),
     # api_key=os.getenv("OPENAI_API_KEY"),
@@ -41,12 +42,25 @@ groq_model_client = OpenAIChatCompletionClient(
 
 # model_client = groq_model_client
 text_mention_termination = TextMentionTermination("TERMINATE")
-max_messages_termination = MaxMessageTermination(max_messages=3)
+max_messages_termination = MaxMessageTermination(max_messages=8)
 termination = text_mention_termination | max_messages_termination
-team = SelectorGroupChat(
-    [agents.get_assistant_agent(model_client), agents.get_new_connection_agent(model_client), agents.get_repair_agent(model_client), agents.get_disconnect_agent(model_client)],
-    model_client = model_client,
+# termination = text_mention_termination 
+
+
+# team = RoundRobinGroupChat(
+#     [agents.get_assistant_agent(model_client), agents.get_new_connection_agent(model_client), agents.get_repair_agent(model_client), agents.get_disconnect_agent(model_client)],
+# )
+# team = SelectorGroupChat(
+#     [agents.get_assistant_agent(model_client), agents.get_new_connection_agent(model_client), agents.get_repair_agent(model_client), agents.get_disconnect_agent(model_client)],
+#     model_client = model_client,
+#     termination_condition=termination,
+# )
+
+team = Swarm(
+    [agents.get_assistant_agent(model_client),agents.get_new_customer_agent(model_client), agents.get_new_connection_agent(model_client), agents.get_repair_agent(model_client), agents.get_disconnect_agent(model_client)],
+    # model_client = model_client,
     termination_condition=termination,
+    max_turns=8,
 )
 async def create_new_connection(service_type: str, customer_name: str, address:str) -> str:
     """Create a new connection for electricity or water."""
@@ -125,16 +139,7 @@ async def set_starters():
 async def on_chat_start():
     cl.user_session.set("counter", 0)
     print("A new chat session has started!")
-#     team = SelectorGroupChat(
-#     [public_utility_agent, new_connection_agent, repair_agent, disconnect_agent],
-#     model_client = model_client,
-#     termination_condition=termination,
-# )
-    # user_proxy  = ChainlitUserProxyAgent("Admin")
-    # cl.user_session.set("user_proxy", user_proxy)
-    # await cl.Message(
-    #     content="Hi There ! How can I help you today?",
-    # ).send()
+
 
 
 
@@ -144,11 +149,7 @@ async def run_conversation(message: cl.Message):
     counter += 1
     cl.user_session.set("counter", counter)
     print("counter",counter)
-    # await cl.Message(
-    #     content=f"Received: {message.content}",
-    # ).send()
-    # UserProxyAgent.on_messages(message)
-    # user_proxy  = cl.user_session.get("user_proxy")
+    
     import asyncio
     # asyncio.run(cl.make_async(public_utility_agent.on_messages(
     #     [TextMessage(content="What is your name? ", source="user")], cancellation_token=CancellationToken()
@@ -158,15 +159,23 @@ async def run_conversation(message: cl.Message):
     #     [TextMessage(content=message.content, source="user")], cancellation_token=CancellationToken()
     # ))
     response = asyncio.run(team.run(task=message.content))
-    print("inner_messages",response)
+    # print("inner_messages",response)
     # print("inner_messages",response.inner_messages)
     # print("chat message",response.chat_message.content)
 
     # print("Send to UI?",response.messages[-1].content)
     llm_content = ""
     for msg in response.messages:
-        llm_content = msg.content 
-        print("Send to UI?",msg.content)
+        print(f"Message type is '{msg.type}', message content is '{msg.content}'")
+
+        if msg.type == "TextMessage":
+            
+            print("Text message is ",msg.content)
+
+            if msg.content is not None or msg.content != "":
+                llm_content = msg.content
+                # llm_content = llm_content + " \n" + msg.content 
+                # print("Send to UI?",llm_content)
     await cl.Message(
         content=llm_content,
     ).send()
