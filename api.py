@@ -78,7 +78,7 @@ async def create_customer(first_name, last_name,state_code,city,street,house_num
     # print("Service Creation Response:", response.text)
     return "customer id is "+customer_id
     
-async def create_service(customer_id,service_kind,service_type, customer_name, address):
+async def create_service(customer_id,service_kind="",service_type="", customer_name="", address=""):
     # 3) Prepare Payload
     payload = {
         "Name": f"{service_kind}  {service_type} connection in {address} for {customer_name}",

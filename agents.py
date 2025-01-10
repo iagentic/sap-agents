@@ -27,11 +27,16 @@ async def create_new_customer(
     print("response :: ", response)
     return response
 
-def schedule_repair(service_type: str, account_id: str) -> str:
-    return f"Repair scheduled for {service_type} on account {account_id}."
+async def schedule_repair(service_type: str, customer_id: str) -> str:
+    response = await api.create_service(customer_id,service_type)
+    print("response :: ", response)
+    return response
 
-def disconnect_service(service_type: str, account_id: str) -> str:
-    return f"Disconnection scheduled for {service_type} on account {account_id}."
+
+async def disconnect_service(service_type: str, customer_id: str) -> str:
+    response = await api.create_service(customer_id,service_type)
+    print("response :: ", response)
+    return response
 
 def get_assistant_agent(model_client):
     public_utility_agent = AssistantAgent(
@@ -51,7 +56,7 @@ def get_assistant_agent(model_client):
         Your primary duties include:
         1. Greet every customer warmly and explain the services PSE offers.
         2. Handle general inquiries about billing, service usage, and service offerings.
-        3. Always confirm whether the customer is new or an existing customer.
+        3. For new service always ask for the customer's full name, the service type(s) they want (electricity, water, or both),
         4. If the customer is new:
            - Politely ask for the customer’s full name, the service type(s) they want (electricity, water, or both),
              and their complete address (house number, street, city, state, ZIP).
@@ -112,11 +117,12 @@ def get_repair_agent(model_client):
         name="repair_agent",
         description="A specialized agent for repairing utility services.",
         model_client=model_client,
-        # tools=[schedule_repair],
-        tools=[create_new_connection],
+        tools=[schedule_repair],
+        # tools=[create_new_connection],
         system_message="""
         You are an agent specialized in scheduling repairs for electricity or water.
         - You only need an account ID and the service type to schedule a repair.
+        - You will summarize and give refeence url to the customer for the repair.
         - Use the keyword 'TERMINATE' to indicate the conversation is complete.
         """
     )
@@ -127,11 +133,13 @@ def get_disconnect_agent(model_client):
         name="disconnect_agent",
         description="A specialized agent for disconnecting utility services.",
         model_client=model_client,
-        # tools=[disconnect_service],
-        tools=[create_new_connection],
+        tools=[disconnect_service],
+        # tools=[create_new_connection],
         system_message="""
-        You are an agent specialized in disconnecting utility services.
+        - You are an agent specialized in disconnecting utility services.
         - You only need an account ID and the service type to schedule a disconnection.
+        - You will summarize and give refeence url to the customer for the disconnection.
+        - Use the keyword 'TERMINATE' to indicate the conversation is complete.
         """
     )
     return disconnect_agent
