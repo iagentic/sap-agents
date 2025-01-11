@@ -166,7 +166,7 @@ async def run_conversation(message: cl.Message):
     # print("Send to UI?",response.messages[-1].content)
     llm_content = ""
     for msg in response.messages:
-        print(f"Message type is '{msg.type}', message content is '{msg.content}'")
+        # print(f"Message type is '{msg.type}', message content is '{msg.content}'")
 
         if msg.type == "TextMessage":
             

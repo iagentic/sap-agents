@@ -27,14 +27,14 @@ async def create_new_customer(
     print("response :: ", response)
     return response
 
-async def schedule_repair(service_type: str, customer_id: str) -> str:
-    response = await api.create_service(customer_id,service_type)
+async def schedule_repair(service_kind: str, service_type: str, customer_id: str) -> str:
+    response = await api.create_service(customer_id,service_kind,service_type)
     print("response :: ", response)
     return response
 
 
-async def disconnect_service(service_type: str, customer_id: str) -> str:
-    response = await api.create_service(customer_id,service_type)
+async def disconnect_service(service_kind:str, service_type: str, customer_id: str) -> str:
+    response = await api.create_service(customer_id,service_kind,service_type)
     print("response :: ", response)
     return response
 
@@ -122,6 +122,7 @@ def get_repair_agent(model_client):
         system_message="""
         You are an agent specialized in scheduling repairs for electricity or water.
         - You only need an account ID and the service type to schedule a repair.
+        - set value for service_kind=epair service before calling the tool 
         - You will summarize and give refeence url to the customer for the repair.
         - Use the keyword 'TERMINATE' to indicate the conversation is complete.
         """
@@ -139,6 +140,7 @@ def get_disconnect_agent(model_client):
         - You are an agent specialized in disconnecting utility services.
         - You only need an account ID and the service type to schedule a disconnection.
         - You will summarize and give refeence url to the customer for the disconnection.
+        - set value for service_kind= disconnect service before calling the tool
         - Use the keyword 'TERMINATE' to indicate the conversation is complete.
         """
     )

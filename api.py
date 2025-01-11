@@ -1,6 +1,8 @@
 import requests
 import json,os
 from dotenv import load_dotenv
+from pyodata import Client
+
 
 load_dotenv() 
 
@@ -79,6 +81,7 @@ async def create_customer(first_name, last_name,state_code,city,street,house_num
     return "customer id is "+customer_id
     
 async def create_service(customer_id,service_kind="",service_type="", customer_name="", address=""):
+    customer_name = await get_customer_by_ID(customer_id)
     # 3) Prepare Payload
     payload = {
         "Name": f"{service_kind}  {service_type} connection in {address} for {customer_name}",
@@ -117,6 +120,7 @@ async def create_service(customer_id,service_kind="",service_type="", customer_n
         "X-CSRF-Token": csrf_token,
         "Accept": "application/json"
     }
+    
     response = session.post(SERVICE_URL, headers=headers, json=payload)
     data = json.loads(response.text)
     service = data["d"]["results"]["Name"]
@@ -126,4 +130,34 @@ async def create_service(customer_id,service_kind="",service_type="", customer_n
 
     return f"  '{service}', is created for customer  '{customer_id}' reference url is {service_url}/?$format=json"
 
+
+async def get_customer_by_ID(customer_id):
+    CUSTOMER_BASE_URL = os.getenv("CUSTOMER_BASE_URL")
+    CUSTOMER_URL = f"{CUSTOMER_BASE_URL}/IndividualCustomerCollection('{customer_id}')"
+    USERNAME = os.getenv("USERNAME")
+    PASSWORD = os.getenv("PASSWORD")
+
+    # 1) Initialize session
+    session = requests.Session()
+    session.auth = (USERNAME, PASSWORD)
+
+    # 2) Fetch CSRF Token
+    headers = {
+        "x-csrf-token": "fetch",
+        "Accept": "application/json"
+    }
+    response = session.get(CUSTOMER_BASE_URL, headers=headers)
+    if response.status_code == 200:
+        csrf_token = response.headers.get("x-csrf-token")
+        session.cookies.update(response.cookies)  # Update session with cookies
+        print("CSRF Token:", csrf_token)
+    
+    
+    url = f"https://my351356.crm.ondemand.com/sap/c4c/odata/v1/customer/IndividualCustomerCollection?$filter=CustomerID eq '{customer_id}'&$format=json"
+
+    response = session.get(url, headers=headers)
+    data = json.loads(response.text)
+    customer = data["d"]["results"][0]["FormattedName"]
+    print("Customer details ::",customer)
+    return customer
     
