@@ -81,10 +81,12 @@ async def create_customer(first_name, last_name,state_code,city,street,house_num
     return "customer id is "+customer_id
     
 async def create_service(customer_id,service_kind="",service_type="", customer_name="", address=""):
-    customer_name = await get_customer_by_ID(customer_id)
+    data = await get_customer_by_ID(customer_id)
+    customer_name = data["d"]["results"][0]["FormattedName"]
+    address = data["d"]["results"][0]["FormattedPostalAddressDescription"]
     # 3) Prepare Payload
     payload = {
-        "Name": f"{service_kind}  {service_type} connection in {address} for {customer_name}",
+        "Name": f"{service_kind}  {service_type} connection at {address} for {customer_name}",
         "ProcessingTypeCode": "SRRQ",  # Service Request type
         "Customer": customer_name,          # Example customer
         "CustomerID":customer_id,     
@@ -125,10 +127,11 @@ async def create_service(customer_id,service_kind="",service_type="", customer_n
     data = json.loads(response.text)
     service = data["d"]["results"]["Name"]
     service_url = data["d"]["results"]["__metadata"]["uri"]
+    service_id = data["d"]["results"]["ID"]
     # print("Service Creation Response:", response.text)
     # f" New '{service}', is created for customer  '{customer_id}'"
 
-    return f"  '{service}', is created for customer  '{customer_id}' reference url is {service_url}/?$format=json"
+    return f"  '{service}', is created for customer '{customer_name}' ustomer ID: '{customer_id}', service order number is '{service_id}' reference url is {service_url}/?$format=json"
 
 
 async def get_customer_by_ID(customer_id):
@@ -159,5 +162,5 @@ async def get_customer_by_ID(customer_id):
     data = json.loads(response.text)
     customer = data["d"]["results"][0]["FormattedName"]
     print("Customer details ::",customer)
-    return customer
+    return data
     
