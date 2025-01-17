@@ -1,7 +1,7 @@
 import os
 
 import chainlit as cl
-import agents as agents
+import sap_agents as sap_agents
 from chainlit.input_widget import Select, Switch, Slider
 from typing import Dict, Optional, Union, Callable
 # from typing import Any, Dict, List
@@ -57,7 +57,7 @@ termination = text_mention_termination | max_messages_termination
 # )
 
 team = Swarm(
-    [agents.get_assistant_agent(model_client),agents.get_new_customer_agent(model_client), agents.get_new_connection_agent(model_client), agents.get_repair_agent(model_client), agents.get_disconnect_agent(model_client)],
+    [sap_agents.get_assistant_agent(model_client),sap_agents.get_new_customer_agent(model_client), sap_agents.get_new_connection_agent(model_client), sap_agents.get_repair_agent(model_client), sap_agents.get_disconnect_agent(model_client)],
     # model_client = model_client,
     termination_condition=termination,
     max_turns=8,

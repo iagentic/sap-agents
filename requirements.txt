@@ -5,3 +5,7 @@ chainlit
 python-dotenv
 pydantic==2.10.1
 opentelemetry-sdk==1.28.2
+yfinance
+finvizfinance
+plotly==5.24.1
+statsmodels

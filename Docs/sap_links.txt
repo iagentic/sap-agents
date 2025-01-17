@@ -1,0 +1,13 @@
+https://my351356.crm.ondemand.com/sap/c4c/odata/v1/c4codataapi/$metadata
+
+https://my351356.crm.ondemand.com/sap/c4c/odata/v1/product/ProductCollection?$format=json
+
+https://my351356.crm.ondemand.com/sap/c4c/odata/v1/servicerequest/ServiceRequestCollection('00163E03A0701ED28A8644CF8D83AE76')/?$format=json
+
+
+https://my351356.crm.ondemand.com/sap/c4c/odata/v1/lead/LeadCollection/?$format=json
+
+https://my351356.crm.ondemand.com/sap/c4c/odata/v1/product/ProductCollection?$format=json
+
+
+
